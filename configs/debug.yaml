@@ -1,0 +1,99 @@
+# Конфиг для отладки на CPU (короткие прогоны)
+# Использование: python train.py --config configs/debug.yaml --epochs 3
+
+project:
+  name: "Satellite Object Detection System"
+  version: "1.0.0"
+
+model:
+  architecture: "yolov8"
+  size: "n"
+  pretrained: true
+  weights: null
+
+classes:
+  - tank
+  - armored_vehicle
+  - aircraft
+  - helicopter
+  - airport
+  - bridge
+  - transport
+
+preprocessing:
+  img_size: 640
+  normalize: true
+  denoise: true
+  brightness_contrast: true
+  tile_size: 1024
+  tile_overlap: 128
+
+augmentation:
+  enabled: true
+  degrees: 10.0
+  flipud: 0.0
+  fliplr: 0.5
+  scale: 0.3
+  hsv_h: 0.015
+  hsv_s: 0.5
+  hsv_v: 0.3
+  mosaic: 0.5
+  mixup: 0.0
+  blur: 0.0
+  noise: 0.0
+
+detection:
+  conf_threshold: 0.25
+  iou_threshold: 0.45
+  max_det: 300
+  nms: true
+
+training:
+  epochs: 3
+  batch_size: 4
+  patience: 10
+  optimizer: "AdamW"
+  lr0: 0.001
+  lrf: 0.01
+  warmup_epochs: 1
+  device: "cpu"
+  workers: 0
+  save_period: 1
+  amp: false
+  transfer_learning: true
+
+evaluation:
+  metrics:
+    - precision
+    - recall
+    - f1
+    - iou
+    - map50
+    - map50_95
+  min_map50: 0.75
+  min_precision: 0.8
+  min_recall: 0.75
+
+inference:
+  device: "cpu"
+  half: false
+  save_txt: true
+  save_json: true
+  save_csv: true
+  save_img: true
+
+security:
+  max_file_size_mb: 100
+  allowed_extensions:
+    - ".jpg"
+    - ".jpeg"
+    - ".png"
+    - ".tif"
+    - ".tiff"
+  max_image_dimension: 16384
+
+paths:
+  dataset: "dataset"
+  models: "models"
+  results: "results"
+  checkpoints: "models/checkpoints"

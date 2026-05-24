@@ -1,0 +1,19 @@
+# Конфигурация датасета для обучения YOLO
+# Пути указываются относительно корня проекта
+
+path: dataset
+train: images/train
+val: images/val
+test: images/test
+
+# Классы объектов (расширяемый список)
+names:
+  0: tank
+  1: armored_vehicle
+  2: aircraft
+  3: helicopter
+  4: airport
+  5: bridge
+  6: transport
+
+nc: 7

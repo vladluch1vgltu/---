@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Распознавание объектов — спутниковые изображения</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --accent: #3b82f6;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --success: #22c55e;
+      --border: #2d3a4f;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    header h1 { font-size: 1.35rem; font-weight: 600; }
+    header p { color: var(--muted); font-size: 0.9rem; margin-top: 0.25rem; }
+    main { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .card h2 { font-size: 1rem; margin-bottom: 1rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .dropzone:hover, .dropzone.dragover { border-color: var(--accent); }
+    .dropzone input { display: none; }
+    .classes { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
+    .tag {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--accent);
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 1rem;
+      width: 100%;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #preview, #result {
+      max-width: 100%;
+      border-radius: 8px;
+      display: none;
+      margin-top: 1rem;
+    }
+    #stats { margin-top: 1rem; font-size: 0.9rem; }
+    #detections { margin-top: 0.75rem; max-height: 200px; overflow-y: auto; }
+    .det-item {
+      padding: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+    .status { color: var(--muted); font-size: 0.85rem; margin-top: 0.5rem; }
+    .status.error { color: #ef4444; }
+    .status.ok { color: var(--success); }
+    #metrics-box { font-size: 0.85rem; color: var(--muted); }
+    #metrics-box table { width: 100%; margin-top: 0.5rem; }
+    #metrics-box td { padding: 0.25rem 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Система распознавания объектов на спутниковых изображениях</h1>
+    <p>YOLO · 7 классов · REST API</p>
+  </header>
+  <main>
+    <div class="grid">
+      <section class="card">
+        <h2>Загрузка</h2>
+        <label class="dropzone" id="dropzone">
+          <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.tif,.tiff">
+          <p>Перетащите изображение или нажмите для выбора</p>
+          <p style="color:var(--muted);font-size:0.8rem;margin-top:0.5rem">JPG, PNG, TIFF · до 100 MB</p>
+        </label>
+        <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.75rem;font-size:0.85rem">
+          <input type="checkbox" id="tiling"> Tiling (большие изображения)
+        </label>
+        <button id="detectBtn" disabled>Запустить распознавание</button>
+        <p class="status" id="status"></p>
+        <img id="preview" alt="Превью">
+      </section>
+      <section class="card">
+        <h2>Результат</h2>
+        <div id="stats"></div>
+        <img id="result" alt="Результат">
+        <div id="detections"></div>
+      </section>
+    </div>
+    <section class="card" style="margin-top:1.5rem">
+      <h2>Классы и метрики</h2>
+      <div class="classes" id="classList"></div>
+      <div id="metrics-box" style="margin-top:1rem"></div>
+    </section>
+  </main>
+  <script>
+    const API = window.location.origin;
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+    const detectBtn = document.getElementById('detectBtn');
+    const preview = document.getElementById('preview');
+    const result = document.getElementById('result');
+    const status = document.getElementById('status');
+    const stats = document.getElementById('stats');
+    const detections = document.getElementById('detections');
+    let selectedFile = null;
+
+    async function loadClasses() {
+      const res = await fetch(`${API}/classes`);
+      const data = await res.json();
+      document.getElementById('classList').innerHTML = data.classes
+        .map(c => `<span class="tag">${c}</span>`).join('');
+    }
+
+    async function loadMetrics() {
+      try {
+        const res = await fetch(`${API}/metrics`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const m = data.metrics || {};
+        document.getElementById('metrics-box').innerHTML = `
+          <table>
+            <tr><td>Precision</td><td>${m.precision ?? '—'}</td></tr>
+            <tr><td>Recall</td><td>${m.recall ?? '—'}</td></tr>
+            <tr><td>F1</td><td>${m.f1 ?? '—'}</td></tr>
+            <tr><td>mAP50</td><td>${m.map50 ?? '—'}</td></tr>
+            <tr><td>mAP50-95</td><td>${m.map50_95 ?? '—'}</td></tr>
+          </table>
+          <p style="margin-top:0.5rem">Требования ТЗ: ${data.requirements_met ? '✓ выполнены' : 'не выполнены'}</p>`;
+      } catch (_) {}
+    }
+
+    function setFile(file) {
+      selectedFile = file;
+      detectBtn.disabled = !file;
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = 'block';
+      result.style.display = 'none';
+      status.textContent = file ? `Выбран: ${file.name}` : '';
+    }
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => setFile(e.target.files[0]));
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+    });
+
+    detectBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      detectBtn.disabled = true;
+      status.textContent = 'Обработка...';
+      status.className = 'status';
+
+      const form = new FormData();
+      form.append('file', selectedFile);
+      const tiling = document.getElementById('tiling').checked;
+
+      try {
+        const res = await fetch(`${API}/detect?use_tiling=${tiling}`, { method: 'POST', body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Ошибка API');
+
+        status.textContent = `Готово за ${data.processing_time_sec} с`;
+        status.className = 'status ok';
+        stats.innerHTML = `<strong>Обнаружено:</strong> ${data.num_detections} объектов`;
+
+        detections.innerHTML = data.detections.map(d =>
+          `<div class="det-item">${d.class_name} — ${(d.confidence * 100).toFixed(1)}% · bbox [${d.bbox.map(v => v.toFixed(0)).join(', ')}]</div>`
+        ).join('') || '<p class="status">Объекты не обнаружены</p>';
+
+        if (data.result_image_url) {
+          result.src = `${API}${data.result_image_url}`;
+          result.style.display = 'block';
+        }
+      } catch (err) {
+        status.textContent = err.message;
+        status.className = 'status error';
+      } finally {
+        detectBtn.disabled = false;
+      }
+    });
+
+    loadClasses();
+    loadMetrics();
+  </script>
+</body>
+</html>

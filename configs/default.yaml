@@ -1,0 +1,100 @@
+# Основная конфигурация системы распознавания объектов
+
+project:
+  name: "Satellite Object Detection System"
+  version: "1.0.0"
+
+model:
+  architecture: "yolov8"
+  size: "m"  # n, s, m, l, x
+  pretrained: true
+  # Стартовые веса для обучения (ищутся также yolov8m.pt в корне проекта).
+  # Для detect/evaluate используется models/best.pt после обучения.
+  weights: null
+
+classes:
+  - tank
+  - armored_vehicle
+  - aircraft
+  - helicopter
+  - airport
+  - bridge
+  - transport
+
+preprocessing:
+  img_size: 640
+  normalize: true
+  denoise: true
+  brightness_contrast: true
+  tile_size: 1024
+  tile_overlap: 128
+
+augmentation:
+  enabled: true
+  degrees: 15.0
+  flipud: 0.0
+  fliplr: 0.5
+  scale: 0.5
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  mosaic: 1.0
+  mixup: 0.1
+  blur: 0.01
+  noise: 0.02
+
+detection:
+  conf_threshold: 0.25
+  iou_threshold: 0.45
+  max_det: 300
+  nms: true
+
+training:
+  epochs: 100
+  batch_size: 16
+  patience: 20
+  optimizer: "AdamW"
+  lr0: 0.001
+  lrf: 0.01
+  warmup_epochs: 3
+  device: "auto"
+  workers: 8
+  save_period: 10
+  amp: true
+  transfer_learning: true
+
+evaluation:
+  metrics:
+    - precision
+    - recall
+    - f1
+    - iou
+    - map50
+    - map50_95
+  min_map50: 0.75
+  min_precision: 0.8
+  min_recall: 0.75
+
+inference:
+  device: "auto"
+  half: false
+  save_txt: true
+  save_json: true
+  save_csv: true
+  save_img: true
+
+security:
+  max_file_size_mb: 100
+  allowed_extensions:
+    - ".jpg"
+    - ".jpeg"
+    - ".png"
+    - ".tif"
+    - ".tiff"
+  max_image_dimension: 16384
+
+paths:
+  dataset: "dataset"
+  models: "models"
+  results: "results"
+  checkpoints: "models/checkpoints"
