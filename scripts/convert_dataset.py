@@ -16,23 +16,17 @@ import argparse
 import shutil
 from pathlib import Path
 
-# Имена классов в DOTA v1/v1.5/v2 -> наши 7 классов ТЗ
+# Имена классов DOTA v1 / v1.5 / v2 -> классы проекта (без armored_vehicle и airport)
 CLASS_MAP = {
-    # ТЗ
+    # Техника и транспорт
     "tank": "tank",
     "storage-tank": "tank",
     "storagetank": "tank",
-    "armored-vehicle": "armored_vehicle",
-    "armoredvehicle": "armored_vehicle",
-    # Авиация
     "plane": "aircraft",
     "aircraft": "aircraft",
     "helicopter": "helicopter",
     "helipad": "helicopter",
-    # Инфраструктура
     "bridge": "bridge",
-    "airport": "airport",
-    # Транспорт
     "vehicle": "transport",
     "car": "transport",
     "truck": "transport",
@@ -42,16 +36,38 @@ CLASS_MAP = {
     "largevehicle": "transport",
     "harbor": "transport",
     "ship": "transport",
+    # Спорт и инфраструктура (ранее отфильтровывались)
+    "baseball-diamond": "baseball_diamond",
+    "baseballdiamond": "baseball_diamond",
+    "tennis-court": "tennis_court",
+    "tenniscourt": "tennis_court",
+    "basketball-court": "basketball_court",
+    "basketballcourt": "basketball_court",
+    "ground-track-field": "ground_track_field",
+    "groundtrackfield": "ground_track_field",
+    "soccer-ball-field": "soccer_field",
+    "soccerballfield": "soccer_field",
+    "swimming-pool": "swimming_pool",
+    "swimmingpool": "swimming_pool",
+    "roundabout": "roundabout",
+    "container-crane": "container_crane",
+    "containercrane": "container_crane",
 }
 
 TARGET_CLASSES = [
     "tank",
-    "armored_vehicle",
     "aircraft",
     "helicopter",
-    "airport",
     "bridge",
     "transport",
+    "tennis_court",
+    "swimming_pool",
+    "baseball_diamond",
+    "basketball_court",
+    "soccer_field",
+    "ground_track_field",
+    "roundabout",
+    "container_crane",
 ]
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
@@ -94,6 +110,13 @@ def parse_dota_label(line: str, img_w: int, img_h: int) -> list[float] | None:
     cy = ((y_min + y_max) / 2) / img_h
     bw = (x_max - x_min) / img_w
     bh = (y_max - y_min) / img_h
+
+    cx = min(max(cx, 0.0), 1.0)
+    cy = min(max(cy, 0.0), 1.0)
+    bw = min(max(bw, 0.0), 1.0)
+    bh = min(max(bh, 0.0), 1.0)
+    if bw <= 0 or bh <= 0:
+        return None
 
     cls_id = TARGET_CLASSES.index(mapped)
     return [cls_id, cx, cy, bw, bh]

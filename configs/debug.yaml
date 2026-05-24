@@ -13,12 +13,18 @@ model:
 
 classes:
   - tank
-  - armored_vehicle
   - aircraft
   - helicopter
-  - airport
   - bridge
   - transport
+  - tennis_court
+  - swimming_pool
+  - baseball_diamond
+  - basketball_court
+  - soccer_field
+  - ground_track_field
+  - roundabout
+  - container_crane
 
 preprocessing:
   img_size: 640

@@ -27,12 +27,18 @@ dataset/
 | ID | Класс |
 |----|-------|
 | 0 | tank |
-| 1 | armored_vehicle |
-| 2 | aircraft |
-| 3 | helicopter |
-| 4 | airport |
-| 5 | bridge |
-| 6 | transport |
+| 1 | aircraft |
+| 2 | helicopter |
+| 3 | bridge |
+| 4 | transport |
+| 5 | tennis_court |
+| 6 | swimming_pool |
+| 7 | baseball_diamond |
+| 8 | basketball_court |
+| 9 | soccer_field |
+| 10 | ground_track_field |
+| 11 | roundabout |
+| 12 | container_crane |
 
 ## Поддерживаемые датасеты
 

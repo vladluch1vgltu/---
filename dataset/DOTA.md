@@ -118,17 +118,23 @@ dataset/
 
 | Класс в DOTA | Класс в системе |
 |--------------|-----------------|
+| storage-tank | tank |
 | plane | aircraft |
 | helicopter, helipad | helicopter |
 | bridge | bridge |
-| airport | airport |
 | small-vehicle, large-vehicle, ship, harbor | transport |
-| storage-tank | tank |
-| armored-vehicle (если есть в разметке) | armored_vehicle |
+| tennis-court | tennis_court |
+| swimming-pool | swimming_pool |
+| baseball-diamond | baseball_diamond |
+| basketball-court | basketball_court |
+| soccer-ball-field | soccer_field |
+| ground-track-field | ground_track_field |
+| roundabout | roundabout |
+| container-crane | container_crane |
 
-Остальные классы DOTA (tennis-court, swimming-pool, ship как отдельный тип и т.д.) **пропускаются** — в датасете остаются только 7 целевых классов из ТЗ.
+**Не используются:** airport, armored-vehicle и прочие классы DOTA вне таблицы.
 
-> В DOTA мало меток именно «tank» / «armored_vehicle» — основная масса объектов: самолёты, корабли, машины, мосты. Для диссертации это нормально: модель учится на доступных классах; при необходимости добавьте DIOR/xView с танками.
+После смены списка классов **переконвертируйте** датасет из исходного DOTA (см. §2) и **переобучите** модель — старые веса `best.pt` несовместимы (другое число классов).
 
 ## 4. Проверка
 
@@ -172,7 +178,7 @@ python detect.py --source dataset/images/val --batch --output results
 | `0 изображений` после конвертации | Проверьте путь: должны быть `.../train/images` и `.../train/labelTxt` |
 | Нет `labelTxt` | Скачайте **Annotations** с сайта DOTA; ищите `trainset_reclabelTxt` / `valset_reclabelTxt` |
 | Есть только train/val/test с png | Это только images — нужен второй архив с разметкой |
-| Очень мало объектов | Нормально: фильтр оставляет только 7 классов ТЗ |
+| Очень мало объектов | Нормально: в датасет попадают только классы из `dataset.yaml` (см. §3) |
 | CUDA out of memory | `batch_size: 4`, модель `model.size: "s"` в configs/default.yaml |
 | Медленный инференс на больших снимках | `python detect.py --source img.tif --tiling` |
 
