@@ -200,7 +200,23 @@ def resolve_dota_paths(input_dir: Path, split: str) -> tuple[Path, Path]:
     )
 
 
-def convert_dota_split(input_dir: Path, output_dir: Path, split: str) -> dict[str, int]:
+def _place_image(src: Path, dest: Path, *, link: bool) -> None:
+    """Копия или симлинк (link=True экономит место на диске при конвертации на сервере)."""
+    if dest.exists() or dest.is_symlink():
+        return
+    if link:
+        dest.symlink_to(src.resolve())
+        return
+    shutil.copy2(src, dest)
+
+
+def convert_dota_split(
+    input_dir: Path,
+    output_dir: Path,
+    split: str,
+    *,
+    link_images: bool = False,
+) -> dict[str, int]:
     import cv2
 
     img_dir, lbl_dir = resolve_dota_paths(input_dir, split)
@@ -246,8 +262,7 @@ def convert_dota_split(input_dir: Path, output_dir: Path, split: str) -> dict[st
             continue
 
         dest_img = out_img / img_path.name
-        if not dest_img.exists():
-            shutil.copy2(img_path, dest_img)
+        _place_image(img_path, dest_img, link=link_images)
 
         with open(out_lbl / f"{img_path.stem}.txt", "w", encoding="utf-8") as f:
             f.write("\n".join(yolo_lines))
@@ -258,7 +273,13 @@ def convert_dota_split(input_dir: Path, output_dir: Path, split: str) -> dict[st
     return stats
 
 
-def convert_dota_all(input_dir: Path, output_dir: Path, splits: list[str]) -> None:
+def convert_dota_all(
+    input_dir: Path,
+    output_dir: Path,
+    splits: list[str],
+    *,
+    link_images: bool = False,
+) -> None:
     total_images = 0
     total_objects = 0
 
@@ -272,13 +293,16 @@ def convert_dota_all(input_dir: Path, output_dir: Path, splits: list[str]) -> No
             split_input = input_dir / split
 
         try:
-            stats = convert_dota_split(split_input, output_dir, split)
+            stats = convert_dota_split(
+                split_input, output_dir, split, link_images=link_images
+            )
         except FileNotFoundError as e:
             print(f"[{split}] Пропуск: {e}")
             continue
 
+        mode = "симлинки" if link_images else "копии"
         print(
-            f"[{split}] изображений: {stats['images']}, "
+            f"[{split}] ({mode}) изображений: {stats['images']}, "
             f"объектов: {stats['objects']}, "
             f"без разметки: {stats['skipped_no_label']}, "
             f"без целевых классов: {stats['skipped_no_class']}"
@@ -302,6 +326,11 @@ def main() -> None:
         action="store_true",
         help="Конвертировать train и val (и test, если есть)",
     )
+    parser.add_argument(
+        "--link-images",
+        action="store_true",
+        help="Симлинки на images вместо копирования (экономит диск на сервере)",
+    )
     args = parser.parse_args()
 
     input_dir = Path(args.input)
@@ -320,10 +349,16 @@ def main() -> None:
                     splits.append(s)
             if not splits:
                 splits = ["train", "val"]
-            convert_dota_all(input_dir, output_dir, splits)
+            convert_dota_all(input_dir, output_dir, splits, link_images=args.link_images)
         else:
-            stats = convert_dota_split(input_dir, output_dir, args.split)
-            print(f"Конвертировано: {stats['images']} изображений, {stats['objects']} объектов")
+            stats = convert_dota_split(
+                input_dir, output_dir, args.split, link_images=args.link_images
+            )
+            mode = "симлинки" if args.link_images else "копии"
+            print(
+                f"Конвертировано ({mode}): {stats['images']} изображений, "
+                f"{stats['objects']} объектов"
+            )
 
 
 if __name__ == "__main__":

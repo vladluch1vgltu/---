@@ -1,0 +1,114 @@
+# Профиль обучения: VPS с NVIDIA L40S-8Q (8 GB VRAM), 4 CPU, 6 GB RAM, 50 GB NVMe
+#
+# Запуск на сервере:
+#   python train.py --config configs/gpu_l40s.yaml --data dataset.yaml
+#
+# Если CUDA OOM — уменьшите training.batch_size до 2 или model.size до "s".
+
+project:
+  name: "Satellite Object Detection System"
+  version: "1.0.0"
+
+model:
+  architecture: "yolov8"
+  size: "m"
+  pretrained: true
+  weights: null
+
+classes:
+  - tank
+  - aircraft
+  - helicopter
+  - bridge
+  - transport
+  - tennis_court
+  - swimming_pool
+  - baseball_diamond
+  - basketball_court
+  - soccer_field
+  - ground_track_field
+  - roundabout
+  - container_crane
+
+preprocessing:
+  # Крупнее 640 — лучше для мелких объектов DOTA (машины, суда)
+  img_size: 1024
+  normalize: true
+  denoise: false
+  brightness_contrast: false
+  tile_size: 1024
+  tile_overlap: 128
+
+augmentation:
+  enabled: true
+  degrees: 10.0
+  flipud: 0.0
+  fliplr: 0.5
+  scale: 0.4
+  hsv_h: 0.015
+  hsv_s: 0.5
+  hsv_v: 0.3
+  mosaic: 1.0
+  mixup: 0.05
+  blur: 0.0
+  noise: 0.0
+
+detection:
+  conf_threshold: 0.2
+  iou_threshold: 0.45
+  max_det: 500
+  nms: true
+
+training:
+  epochs: 100
+  # yolov8m @ 1024 на 8 GB VRAM: 3–4; при OOM → 2 или size: "s" и batch 6
+  batch_size: 3
+  patience: 25
+  optimizer: "AdamW"
+  lr0: 0.001
+  lrf: 0.01
+  warmup_epochs: 3
+  device: "0"
+  workers: 0
+  save_period: 10
+  amp: true
+  transfer_learning: true
+  cache: false
+  close_mosaic: 10
+  cos_lr: true
+
+evaluation:
+  metrics:
+    - precision
+    - recall
+    - f1
+    - iou
+    - map50
+    - map50_95
+  min_map50: 0.75
+  min_precision: 0.8
+  min_recall: 0.75
+
+inference:
+  device: "0"
+  half: true
+  save_txt: true
+  save_json: true
+  save_csv: true
+  save_img: true
+
+security:
+  max_file_size_mb: 100
+  allowed_extensions:
+    - ".jpg"
+    - ".jpeg"
+    - ".png"
+    - ".tif"
+    - ".tiff"
+  max_image_dimension: 16384
+
+paths:
+  dataset: "dataset"
+  models: "models"
+  results: "results"
+  checkpoints: "models/checkpoints"
