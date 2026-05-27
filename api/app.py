@@ -74,6 +74,11 @@ def get_detector() -> SatelliteDetector:
     global detector
     if detector is None:
         detector = SatelliteDetector(config_path=CONFIG_PATH)
+        print(
+            f"[API] weights={detector.weights_path} "
+            f"imgsz={detector.pre_cfg.get('img_size')} "
+            f"conf={detector.det_cfg['conf_threshold']}"
+        )
     return detector
 
 

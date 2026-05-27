@@ -80,8 +80,12 @@ class SatelliteDetector:
             if use_tiling:
                 detections = self._detect_tiled(img, src_path.stem)
             else:
-                processed = self.preprocessor.preprocess(img)
-                detections = self._run_model(processed, offset=(0, 0))
+                # YOLO сам делает letterbox по imgsz; preprocess() (denoise, 640²) ломает качество.
+                detections = self._run_model(
+                    img,
+                    offset=(0, 0),
+                    imgsz=self.pre_cfg.get("img_size", 640),
+                )
 
             result = self._build_result(src_path, detections, img)
             self._save_outputs(result, img, output_dir)
@@ -105,18 +109,26 @@ class SatelliteDetector:
                 x1 = max(0, x2 - tile_size)
                 y1 = max(0, y2 - tile_size)
                 tile = img[y1:y2, x1:x2]
-                processed = self.preprocessor.preprocess(tile)
-                dets = self._run_model(processed, offset=(x1, y1))
+                dets = self._run_model(
+                    tile,
+                    offset=(x1, y1),
+                    imgsz=self.pre_cfg.get("tile_size", 1024),
+                )
                 all_dets.extend(dets)
 
         return self._merge_tile_detections(all_dets)
 
     def _run_model(
-        self, img: np.ndarray, offset: tuple[int, int] = (0, 0)
+        self,
+        img: np.ndarray,
+        offset: tuple[int, int] = (0, 0),
+        imgsz: int | None = None,
     ) -> list[dict[str, Any]]:
-        """Запуск YOLO на одном фрагменте."""
+        """Запуск YOLO на фрагменте (как yolo predict: исходный кадр + imgsz)."""
+        size = imgsz or self.pre_cfg.get("img_size", 640)
         results = self.model.predict(
             source=img,
+            imgsz=size,
             conf=self.det_cfg["conf_threshold"],
             iou=self.det_cfg["iou_threshold"],
             max_det=self.det_cfg["max_det"],

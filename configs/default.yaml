@@ -28,10 +28,12 @@ classes:
   - container_crane
 
 preprocessing:
+  # API и detect: imgsz для YOLO (совпадайте с размером при обучении).
   img_size: 640
   normalize: true
-  denoise: true
-  brightness_contrast: true
+  # При инференсе не применяются (см. detector.py); выключено как при train на DOTA.
+  denoise: false
+  brightness_contrast: false
   tile_size: 1024
   tile_overlap: 128
 
